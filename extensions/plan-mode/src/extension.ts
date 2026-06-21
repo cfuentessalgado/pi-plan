@@ -138,7 +138,7 @@ export function registerPlanMode(pi: ExtensionAPI): void {
     },
   });
 
-  pi.registerCommand("plan-toggle", {
+  pi.registerCommand("plan", {
     description: "Toggle persistent plan mode; optional text seeds the planning prompt",
     handler: async (args, ctx) => {
       if (planMode) disablePlan(ctx); else enablePlan(ctx);

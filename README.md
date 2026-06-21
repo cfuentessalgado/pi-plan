@@ -18,7 +18,7 @@ pi -e ./extensions/plan-mode
 
 ## Commands
 
-- `/plan-toggle [seed]` — toggles persistent plan mode. Optional seed text is sent as the first planning prompt.
+- `/plan [seed]` — toggles persistent plan mode. Optional seed text is sent as the first planning prompt.
 - `/plan-approve [path]` — approves a plan file and starts execution mode. If `path` is omitted, the last plan file edited/written during plan mode is used.
 - `/plan-resume [path]` — resumes a plan from its checked checklist state. This uses the same execution flow as `/plan-approve`, but is clearer for partially completed plans. Path autocomplete suggests `PLAN.md`, `plans/*.md`, and `docs/plans/*.md`.
 - `/plan-complete` — completes the active approved-plan UI after all todos are checked, clears the todo widget/status, and exits execution mode.
