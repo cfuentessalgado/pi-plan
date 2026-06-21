@@ -74,7 +74,7 @@ export function extractStepsFromMarkdown(markdown: string): TodoItem[] {
   if (!bounds) return [];
   const body = markdown.slice(bounds.start, bounds.end);
   const items: TodoItem[] = [];
-  for (const match of body.matchAll(/^\s*[-*]\s+\[([ xX])\]\s+(.+)$/gm)) {
+  for (const match of body.matchAll(/^\s*(?:[-*]|\d+[.)])\s+\[([ xX])\]\s+(.+)$/gm)) {
     const text = match[2].replace(/`([^`]+)`/g, "$1").replace(/\*\*([^*]+)\*\*/g, "$1").trim();
     if (text) items.push({ step: items.length + 1, text, completed: match[1].toLowerCase() === "x" });
   }
@@ -85,7 +85,7 @@ export function applyTodoCompletionToMarkdown(markdown: string, items: TodoItem[
   const bounds = stepsSection(markdown);
   if (!bounds) return markdown;
   let index = 0;
-  const body = markdown.slice(bounds.start, bounds.end).replace(/^(\s*[-*]\s+\[)([ xX])(\]\s+.+)$/gm, (line, prefix: string, marker: string, suffix: string) => {
+  const body = markdown.slice(bounds.start, bounds.end).replace(/^(\s*(?:[-*]|\d+[.)])\s+\[)([ xX])(\]\s+.+)$/gm, (line, prefix: string, marker: string, suffix: string) => {
     const item = items[index++];
     if (!item) return line;
     return `${prefix}${item.completed ? "x" : marker}${suffix}`;

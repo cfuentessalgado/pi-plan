@@ -11,6 +11,10 @@ Plan file convention: PLAN.md, plans/<short-name>.md, or docs/plans/<short-name>
 
 Plan file sections: Context, Approach, Files to modify, Reuse, Steps, Verification.
 
+The Steps section MUST use markdown task-list checkboxes, one executable step per line, preferably exactly:
+- [ ] Step description
+Do not use plain numbered lists for executable steps.
+
 Your turn should end by asking the user a question or presenting the completed plan for review.`;
 
 export function readPrompt(cwd: string): string {
