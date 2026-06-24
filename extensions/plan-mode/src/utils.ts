@@ -46,11 +46,19 @@ const SAFE_PATTERNS = [
   /^\s*wget\s+(-O\s*-|--output-document=-)\b/i,
 ];
 
+const SAFE_CONNECTORS = /\s*(?:&&|\|\||;)\s*/;
+
 export interface TodoItem { step: number; text: string; completed: boolean }
 
 export function isSafeCommand(command: string): boolean {
-  return !DESTRUCTIVE_PATTERNS.some((pattern) => pattern.test(command)) &&
-    SAFE_PATTERNS.some((pattern) => pattern.test(command));
+  const trimmed = command.trim();
+  if (!trimmed) return false;
+  if (DESTRUCTIVE_PATTERNS.some((pattern) => pattern.test(command))) return false;
+  return trimmed
+    .split(SAFE_CONNECTORS)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .every((part) => SAFE_PATTERNS.some((pattern) => pattern.test(part)));
 }
 
 export function isAllowedPlanPath(filePath: string, cwd: string): boolean {
