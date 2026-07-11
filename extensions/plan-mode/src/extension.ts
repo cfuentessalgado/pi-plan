@@ -26,6 +26,9 @@ export function registerPlanMode(pi: ExtensionAPI): void {
   let todos: TodoItem[] = [];
   let normalTools: string[] | undefined;
   let currentCwd = process.cwd();
+  let renderedStatus: string | undefined;
+  let renderedWidget: string[] | undefined;
+  let hasRenderedUi = false;
 
   function getPlanPathCompletions(prefix: string): AutocompleteItem[] | null {
     const candidates: string[] = [];
@@ -55,20 +58,34 @@ export function registerPlanMode(pi: ExtensionAPI): void {
   }
 
   function updateStatus(ctx: ExtensionContext): void {
+    let status: string | undefined;
+    let widget: string[] | undefined;
+
     if (executionMode && todos.length > 0) {
       const done = todos.filter((todo) => todo.completed).length;
-      ctx.ui.setStatus("plan-mode", ctx.ui.theme.fg("accent", `📋 ${done}/${todos.length}`));
-      ctx.ui.setWidget(
-        "plan-todos",
-        todos.map((todo) => todo.completed ? `\u001b[2;32m☑ ${todo.text}\u001b[0m` : `\u001b[1m☐ ${todo.text}\u001b[0m`),
-      );
+      status = ctx.ui.theme.fg("accent", `📋 ${done}/${todos.length}`);
+      widget = todos.map((todo) => todo.completed ? `\u001b[2;32m☑ ${todo.text}\u001b[0m` : `\u001b[1m☐ ${todo.text}\u001b[0m`);
     } else if (planMode) {
-      ctx.ui.setStatus("plan-mode", ctx.ui.theme.fg("warning", "⏸ plan"));
-      ctx.ui.setWidget("plan-todos", undefined);
-    } else {
-      ctx.ui.setStatus("plan-mode", undefined);
-      ctx.ui.setWidget("plan-todos", undefined);
+      status = ctx.ui.theme.fg("warning", "⏸ plan");
     }
+
+    const widgetChanged = widget === undefined
+      ? renderedWidget !== undefined
+      : renderedWidget === undefined
+        || widget.length !== renderedWidget.length
+        || widget.some((item, index) => item !== renderedWidget?.[index]);
+
+    // A fresh session starts with no plan UI, so avoid clearing what is already absent.
+    if (status === undefined && !widget && !hasRenderedUi) {
+      hasRenderedUi = true;
+      return;
+    }
+
+    if (renderedStatus !== status) ctx.ui.setStatus("plan-mode", status);
+    if (widgetChanged) ctx.ui.setWidget("plan-todos", widget);
+    renderedStatus = status;
+    renderedWidget = widget;
+    hasRenderedUi = true;
   }
 
   function getExecutionTools(): string[] {
