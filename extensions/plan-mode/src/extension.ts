@@ -3,13 +3,14 @@ import * as path from "node:path";
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type { AssistantMessage, TextContent } from "@earendil-works/pi-ai";
 import { isToolCallEventType, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { readPrompt } from "./prompt.ts";
+import { getPlanPrompt } from "./prompt.ts";
 import { applyTodoCompletionToMarkdown, extractStepsFromMarkdown, isAllowedPlanPath, isSafeCommand, markCompletedSteps, type TodoItem } from "./utils.ts";
 
 const PLAN_TOOLS = ["read", "bash", "edit", "write", "question", "web_fetch"];
 const PROGRESS_TOOL = "plan_done";
 type AutocompleteItem = { value: string; label: string };
 const STATE_TYPE = "plan-mode-state";
+const PLAN_MODE_REMINDER = "Plan mode is active. Explore and refine the markdown plan only; do not implement. Edit/write are restricted to allowed plan files. Wait for explicit /plan-approve.";
 
 function assistantText(message: AssistantMessage): string {
   return message.content.filter((block): block is TextContent => block.type === "text").map((block) => block.text).join("\n");
@@ -29,6 +30,7 @@ export function registerPlanMode(pi: ExtensionAPI): void {
   let renderedStatus: string | undefined;
   let renderedWidget: string[] | undefined;
   let hasRenderedUi = false;
+  let planInstructionsDelivered = false;
 
   function getPlanPathCompletions(prefix: string): AutocompleteItem[] | null {
     const candidates: string[] = [];
@@ -45,7 +47,7 @@ export function registerPlanMode(pi: ExtensionAPI): void {
   }
 
   function persist(): void {
-    pi.appendEntry(STATE_TYPE, { planMode, executionMode, planFile, todos });
+    pi.appendEntry(STATE_TYPE, { planMode, executionMode, planFile, todos, planInstructionsDelivered });
   }
 
   function updatePlanFile(ctx: ExtensionContext): void {
@@ -98,6 +100,7 @@ export function registerPlanMode(pi: ExtensionAPI): void {
     planMode = true;
     executionMode = false;
     todos = [];
+    planInstructionsDelivered = false;
     pi.setActiveTools(PLAN_TOOLS);
     ctx.ui.notify("Plan mode enabled. Code/config edits are blocked; only plan markdown may be updated.", "info");
     updateStatus(ctx);
@@ -107,6 +110,7 @@ export function registerPlanMode(pi: ExtensionAPI): void {
   function disablePlan(ctx: ExtensionContext): void {
     planMode = false;
     executionMode = false;
+    planInstructionsDelivered = false;
     if (normalTools) pi.setActiveTools(normalTools);
     ctx.ui.notify("Plan mode disabled.", "info");
     updateStatus(ctx);
@@ -175,6 +179,7 @@ export function registerPlanMode(pi: ExtensionAPI): void {
     todos = extractStepsFromMarkdown(fs.readFileSync(fullPath, "utf8"));
     planMode = false;
     executionMode = true;
+    planInstructionsDelivered = false;
     pi.setActiveTools(getExecutionTools());
     updateStatus(ctx);
     persist();
@@ -231,7 +236,14 @@ export function registerPlanMode(pi: ExtensionAPI): void {
 
   pi.on("before_agent_start", async (_event, ctx) => {
     if (planMode) {
-      return { message: { customType: "plan-mode-context", display: false, content: `[PLAN MODE ACTIVE]\n\n${readPrompt(ctx.cwd)}\n\nExtension enforcement: edit/write may only target PLAN.md, plans/*.md, or docs/plans/*.md. The plan is not approved until the user runs /plan-approve [path].` } };
+      const content = planInstructionsDelivered
+        ? PLAN_MODE_REMINDER
+        : `[PLAN MODE ACTIVE]\n\n${getPlanPrompt()}\n\nExtension enforcement: edit/write may only target PLAN.md, plans/*.md, or docs/plans/*.md. The plan is not approved until the user runs /plan-approve [path].`;
+      if (!planInstructionsDelivered) {
+        planInstructionsDelivered = true;
+        persist();
+      }
+      return { message: { customType: "plan-mode-context", display: false, content } };
     }
     if (executionMode && todos.length > 0) {
       const remaining = todos.filter((todo) => !todo.completed).map((todo) => `${todo.step}. ${todo.text}`).join("\n");
@@ -247,7 +259,7 @@ export function registerPlanMode(pi: ExtensionAPI): void {
   pi.on("session_start", async (_event, ctx) => {
     currentCwd = ctx.cwd;
     const entry = ctx.sessionManager.getEntries().filter((e: any) => e.type === "custom" && e.customType === STATE_TYPE).pop() as any;
-    if (entry?.data) ({ planMode = false, executionMode = false, planFile, todos = [] } = entry.data);
+    if (entry?.data) ({ planMode = false, executionMode = false, planFile, todos = [], planInstructionsDelivered = false } = entry.data);
     normalTools = pi.getAllTools().map((tool) => tool.name).filter((name) => name !== PROGRESS_TOOL);
     if (planMode) pi.setActiveTools(PLAN_TOOLS);
     else if (executionMode) pi.setActiveTools(getExecutionTools());

@@ -28,7 +28,7 @@ pi -e ./extensions/plan-mode
 - Safe exploration tools stay available: `read`, safe `bash`, `question`, `web_fetch`.
 - `edit` and `write` are allowed only for `PLAN.md`, `plans/*.md`, or `docs/plans/*.md`.
 - Unsafe bash commands are blocked while plan mode is active.
-- Each planning turn injects instructions from `plans/plan.md` when present, falling back to `prompts/plan.md` or embedded defaults.
+- The first planning turn injects the full instructions bundled with the extension; continuation turns receive only a concise plan-mode reminder. Project files cannot override either prompt.
 
 ## Execution mode
 

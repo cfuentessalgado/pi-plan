@@ -1,7 +1,4 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
-
-const FALLBACK_PLAN_PROMPT = `# Plan Mode
+const PLAN_PROMPT = `# Plan Mode
 
 You are in plan mode. You MUST NOT make any changes to the codebase except maintaining the markdown plan file. Do not commit, install, or run destructive commands.
 
@@ -17,10 +14,6 @@ Do not use plain numbered lists for executable steps.
 
 Your turn should end by asking the user a question or presenting the completed plan for review.`;
 
-export function readPrompt(cwd: string): string {
-  for (const candidate of ["prompts/plan.md", "plans/plan.md"]) {
-    const fullPath = path.join(cwd, candidate);
-    if (fs.existsSync(fullPath)) return fs.readFileSync(fullPath, "utf8");
-  }
-  return FALLBACK_PLAN_PROMPT;
+export function getPlanPrompt(): string {
+  return PLAN_PROMPT;
 }
